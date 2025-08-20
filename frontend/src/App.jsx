@@ -83,21 +83,68 @@ function App() {
         </button>
       </form>
 
+      {/* ✅ Updated Result Block */}
       <div style={{ marginTop: 24 }}>
         <h2>Result</h2>
         {!result && <p>No result yet.</p>}
+
         {result?.error && <p style={{ color: "red" }}>{result.error}</p>}
+
         {result && !result.error && (
-          <pre
-            style={{
-              background: "#f6f8fa",
-              padding: 12,
-              overflowX: "auto",
-              borderRadius: 6,
-            }}
-          >
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          <div style={{ border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <span
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  color: "white",
+                  background:
+                    result.status === "Real"
+                      ? "#16a34a"
+                      : result.status === "Fake"
+                      ? "#dc2626"
+                      : "#f59e0b",
+                }}
+              >
+                {result.status}
+              </span>
+              <strong>Credibility:</strong> {result.credibility}/100
+            </div>
+
+            {/* progress bar */}
+            <div style={{ marginTop: 10, height: 10, background: "#eee", borderRadius: 6 }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${result.credibility}%`,
+                  borderRadius: 6,
+                  background:
+                    result.credibility >= 75
+                      ? "#16a34a"
+                      : result.credibility <= 40
+                      ? "#dc2626"
+                      : "#f59e0b",
+                }}
+              />
+            </div>
+
+            {/* paid/unpaid */}
+            {result.paid !== null && (
+              <p style={{ marginTop: 10 }}>
+                <strong>Paid:</strong> {result.paid ? "Yes" : "No"}
+              </p>
+            )}
+
+            {/* explanations */}
+            <div style={{ marginTop: 10 }}>
+              <strong>Why:</strong>
+              <ul>
+                {result.explanations?.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
         )}
       </div>
 
