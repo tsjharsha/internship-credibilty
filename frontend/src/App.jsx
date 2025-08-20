@@ -1,5 +1,7 @@
+
+// src/App.jsx
 import { useState } from "react";
-import axios from "axios";
+import api from "./api"; // if you created api.js; otherwise change to axios import
 
 function App() {
   const [link, setLink] = useState("");
@@ -8,35 +10,43 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  // Backend API URL
-  const API_URL = import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000";
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResult(null);
 
     try {
-      const { data } = await axios.post(`${API_URL}/check`, {
-        link,
-        description: desc,
-        email,
-      });
+      // use api if available, otherwise fall back to axios
+      const { data } = await (api
+        ? api.post("/check", { link, description: desc, email })
+        : fetch(`${import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000"}/check`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ link, description: desc, email }),
+          }).then((r) => r.json()));
+
       setResult(data);
+      console.log("API response:", data);
     } catch (err) {
-      if (err.response) {
+      console.error("Request error:", err);
+      // handle axios vs fetch error shapes
+      if (err?.response) {
         setResult({ error: err.response.data || err.response.statusText });
-      } else if (err.request) {
+      } else if (err?.request) {
         setResult({
           error: "No response from backend. Check if server is running.",
         });
       } else {
-        setResult({ error: err.message });
+        setResult({ error: err.message || "Unknown error" });
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Small helper to render badge color
+  const badgeColor = (status) =>
+    status === "Real" ? "#16a34a" : status === "Fake" ? "#dc2626" : "#f59e0b";
 
   return (
     <div style={{ maxWidth: 720, margin: "40px auto", padding: 16 }}>
@@ -83,7 +93,7 @@ function App() {
         </button>
       </form>
 
-      {/* ✅ Updated Result Block */}
+      {/* Result block */}
       <div style={{ marginTop: 24 }}>
         <h2>Result</h2>
         {!result && <p>No result yet.</p>}
@@ -98,17 +108,13 @@ function App() {
                   padding: "4px 10px",
                   borderRadius: 999,
                   color: "white",
-                  background:
-                    result.status === "Real"
-                      ? "#16a34a"
-                      : result.status === "Fake"
-                      ? "#dc2626"
-                      : "#f59e0b",
+                  background: badgeColor(result.status),
+                  fontWeight: 600,
                 }}
               >
                 {result.status}
               </span>
-              <strong>Credibility:</strong> {result.credibility}/100
+              <strong>Credibility:</strong> {result.credibility ?? "N/A"}/100
             </div>
 
             {/* progress bar */}
@@ -116,20 +122,15 @@ function App() {
               <div
                 style={{
                   height: "100%",
-                  width: `${result.credibility}%`,
+                  width: `${result.credibility ?? 0}%`,
                   borderRadius: 6,
-                  background:
-                    result.credibility >= 75
-                      ? "#16a34a"
-                      : result.credibility <= 40
-                      ? "#dc2626"
-                      : "#f59e0b",
+                  background: result.credibility >= 75 ? "#16a34a" : result.credibility <= 40 ? "#dc2626" : "#f59e0b",
                 }}
               />
             </div>
 
             {/* paid/unpaid */}
-            {result.paid !== null && (
+            {result.paid !== null && typeof result.paid !== "undefined" && (
               <p style={{ marginTop: 10 }}>
                 <strong>Paid:</strong> {result.paid ? "Yes" : "No"}
               </p>
@@ -139,9 +140,7 @@ function App() {
             <div style={{ marginTop: 10 }}>
               <strong>Why:</strong>
               <ul>
-                {result.explanations?.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
+                {(result.explanations && result.explanations.length > 0) ? result.explanations.map((e, i) => <li key={i}>{e}</li>) : <li>No explanations provided.</li>}
               </ul>
             </div>
           </div>
@@ -149,7 +148,7 @@ function App() {
       </div>
 
       <footer style={{ marginTop: 40, opacity: 0.7 }}>
-        <small>Dev API base: {API_URL}</small>
+        <small>Dev API base: {import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000"}</small>
       </footer>
     </div>
   );
